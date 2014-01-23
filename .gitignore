@@ -1,0 +1,8 @@
+*.opensdf
+*.sdf
+*.suo
+build
+common
+deps
+Debug
+Release
