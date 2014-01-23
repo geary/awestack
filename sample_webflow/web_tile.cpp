@@ -11,29 +11,29 @@
 using namespace Awesomium;
 
 WebTile::WebTile(int width, int height) : isTransparent(false) {
-  webView = Awesomium::WebCore::instance()->CreateWebView(width, height);
+	webView = Awesomium::WebCore::instance()->CreateWebView(width, height);
 }
 
 WebTile::WebTile(Awesomium::WebView* existingWebView, int width, int height) : webView(existingWebView), isTransparent(false) {
 }
 
 WebTile::~WebTile() {
-  webView->Destroy();
+	webView->Destroy();
 }
 
 const GLTextureSurface* WebTile::surface() {
-  const Awesomium::Surface* surface = webView->surface();
-  if (surface)
-    return static_cast<const GLTextureSurface*>(surface);
-  
-  return 0;
+	const Awesomium::Surface* surface = webView->surface();
+	if (surface)
+		return static_cast<const GLTextureSurface*>(surface);
+	
+	return 0;
 }
 
 void WebTile::resize(int width, int height) {
-  webView->Resize(width, height);
+	webView->Resize(width, height);
 }
 
 void WebTile::toggleTransparency() {
-  webView->ExecuteJavascript(WSLit("document.body.style.backgroundColor = 'transparent'"), WSLit(""));
-  webView->SetTransparent(isTransparent = !isTransparent);
+	webView->ExecuteJavascript(WSLit("document.body.style.backgroundColor = 'transparent'"), WSLit(""));
+	webView->SetTransparent(isTransparent = !isTransparent);
 }

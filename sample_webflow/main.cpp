@@ -1,10 +1,10 @@
 #include "application.h"
 
 int main(int argc, char *argv[]) {
-  Application app;
+	Application app;
 
-  while (!app.isReadyToQuit())
-    app.update();
+	while (!app.isReadyToQuit())
+		app.update();
 
-  return 0;
+	return 0;
 }
