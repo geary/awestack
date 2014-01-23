@@ -97,9 +97,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\common\sdl\gl_texture_surface.cc" />
-    <ClCompile Include="application.cc" />
-    <ClCompile Include="main.cc" />
-    <ClCompile Include="web_tile.cc" />
+    <ClCompile Include="application.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="web_tile.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="application.h" />
