@@ -105,6 +105,9 @@
     <ClInclude Include="application.h" />
     <ClInclude Include="web_tile.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="awe.html" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

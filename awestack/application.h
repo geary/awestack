@@ -18,20 +18,46 @@
 // Forward declaration, actually declared in WebTile.h
 struct WebTile;
 
+class MethodDispatcher;
+
 // Our main Application class is responsible for setting up the WebCore, the
 // OpenGL scene, handling input, animating "WebTiles", and all other logic.
-class Application : public Awesomium::WebViewListener::View,
-	public Awesomium::WebViewListener::Load,
+class Application :
+	public Awesomium::WebViewListener::View,
 	public Awesomium::WebViewListener::Process {
  public:
 	Application();
 	~Application();
 
-	void addWebTileWithURL(const std::string& url, int width, int height);
+	WebTile* addWebTile(
+		const Awesomium::WebString id,
+		const Awesomium::WebString url,
+		int left, int top,
+		int width, int height
+	);
+
+	void loadWebTile(
+		const Awesomium::WebString id,
+		const Awesomium::WebString url
+	);
+
+	void removeWebTile(
+		const Awesomium::WebString id
+	);
+
+	int getWebTileIndex(
+		const Awesomium::WebString id
+	);
+
+	WebTile* getWebTile(
+		const Awesomium::WebString id
+	);
 
 	void update();
 
 	void draw();
+
+	void drawOne( WebTile* tile );
 
 	void drawTile(int index, double off, double zoom);
 
@@ -56,6 +82,20 @@ class Application : public Awesomium::WebViewListener::View,
 	void handleDragEnd(int x, int y);
 
 	bool isReadyToQuit() const;
+
+	void bindMethods( Awesomium::WebView* webView, const Awesomium::WebString& id );
+
+	void CallJavaScript( Awesomium::WebView* view, const Awesomium::WebString& object, const Awesomium::WebString& function );
+
+	void JS_open( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+
+	void JS_close( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+
+	void JS_focus( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+
+	void JS_order( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+
+	void JS_postMessage( Awesomium::WebView* caller, const Awesomium::JSArray& args );
 
 	virtual void OnChangeTitle(Awesomium::WebView* caller,
 														 const Awesomium::WebString& title);
@@ -87,27 +127,6 @@ class Application : public Awesomium::WebViewListener::View,
 																		const Awesomium::Rect& initial_pos,
 																		bool is_popup);
 
-	virtual void OnBeginLoadingFrame(Awesomium::WebView* caller,
-																	 int64 frame_id,
-																	 bool is_main_frame,
-																	 const Awesomium::WebURL& url,
-																	 bool is_error_page);
-
-	virtual void OnFailLoadingFrame(Awesomium::WebView* caller,
-																	int64 frame_id,
-																	bool is_main_frame,
-																	const Awesomium::WebURL& url,
-																	int error_code,
-																	const Awesomium::WebString& error_description);
-
-	virtual void OnFinishLoadingFrame(Awesomium::WebView* caller,
-																		int64 frame_id,
-																		bool is_main_frame,
-																		const Awesomium::WebURL& url);
-
-	virtual void OnDocumentReady(Awesomium::WebView* caller,
-																		const Awesomium::WebURL& url);
-
 	virtual void OnUnresponsive(Awesomium::WebView* caller);
 
 	virtual void OnResponsive(Awesomium::WebView* caller);
@@ -126,6 +145,8 @@ class Application : public Awesomium::WebViewListener::View,
 	int activeWebTile;
 	Awesomium::WebCore* webCore;
 	int WIDTH, HEIGHT;
+	MethodDispatcher* m_methodDispatcher;
+	Awesomium::JSArray m_order;
 };
 
 #endif

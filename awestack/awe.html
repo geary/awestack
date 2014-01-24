@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<title>Awe</title>
+	<style>
+		html, body {
+			font-size: 60px;
+			/*background-color: transparent;*/
+			/*opacity: .75;*/
+		}
+	</style>
+</head>
+
+<body>
+
+<script>
+	console.log( 'Start' );
+
+	document.write(
+		'<div id="hash" style="color: ', location.hash == '#One' ? 'rgba(255,68,68,.75); font-size:600px;' : 'rgba(68,255,68,.75)', ';">',
+			location.hash.slice( 1 ),
+		'</div>'
+	);
+
+    var AweStackClient = {
+
+	    start: function( args ) {
+//	        console.log('AweStackClient.start: "' + args.id + '"');
+//	        console.log( location.hash );
+	        addListeners();
+	        if( location.hash == '#One' ) {
+	        	addNumbers();
+/*
+	            setTimeout( function() {
+	                AweStack.order([ 'home', '1', '3', '5', '7', '9' ]);
+	            }, 2000 );
+*/
+	        	removerTest();
+	        } else {
+	            AweStack.postMessage(
+                    'home',
+                    'from:' + JSON.stringify( { hash: location.hash.replace( '#', "'" ) } ).replace( "'", "\\'" )
+                );
+	        }
+	    },
+
+	    getMessage: function( value ) {
+	        console.log( 'getMessage:' + value );
+	    }
+	};
+
+    function addListeners() {
+        'keydown keyup keypress mousemove mousedown mouseup click'.split( ' ' )
+            .forEach( function( name ) {
+                document.addEventListener( name, function( event ) {
+                    console.log( 'Event: ' + name );
+                });
+            });
+	}
+
+	function addNumbers() {
+	    var n = 0;
+	    for( var row = 0; row < 3; ++row ) {
+	        for( var col = 0; col < 3; ++col ) {
+	            ++n;
+	            AweStack.open({
+	                id: '' + n,
+	                url: location.href.replace( '#One', '#' + n ),
+	                left: col * 425,
+	                top: row * 240,
+	                width: 200,
+	                height: 100
+	            });
+	        }
+	    }
+	    AweStack.focus( '5' );
+	}
+
+	function removerTest() {
+	    var removers = [1, 4, 7, 2, 5, 8, 3, 6, 9];
+	    var iRemove = 0;
+	    function remove() {
+	        if( iRemove >= removers.length ) return;
+	        AweStack.close( '' + removers[iRemove++] );
+	        setTimeout( remove, 1000 );
+	    }
+	    setTimeout( remove, 2000 );
+    }
+
+	//removerTest();
+
+//    var requestAnimationFrame = webkitRequestAnimationFrame;
+
+//    requestAnimationFrame( tick );
+	function tick() {
+		console.log( ( +new Date / 1000 ).toFixed(3) + ' ' + location.hash.slice(1) );
+		requestAnimationFrame( tick );
+	}
+</script>
+
+</body>
+</html>

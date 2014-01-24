@@ -1,4 +1,6 @@
 #include "application.h"
+#include "../common/method_dispatcher.h"
+#include "../common/js_delegate.h"
 #include "../common/sdl/gl_texture_surface.h"
 #include <Awesomium/STLHelpers.h>
 #include "web_tile.h"
@@ -36,7 +38,10 @@ Application::Application() :
 	zoomStart(-1),
 	numTiles(0),
 	activeWebTile(-1),
-	webCore(0) {
+	webCore(0),
+	m_methodDispatcher(NULL),
+	m_order( JSArray() )
+{
 	int sdlError = SDL_Init(SDL_INIT_EVERYTHING);
 
 	if (sdlError == -1) {
@@ -69,14 +74,19 @@ Application::Application() :
 	webCore = Awesomium::WebCore::Initialize(conf);
 	webCore->set_surface_factory(new GLTextureSurfaceFactory());
 
-	addWebTileWithURL("http://www.awesomium.com/webflow/1.7/", WIDTH, HEIGHT);
-	addWebTileWithURL("http://www.google.com", WIDTH, HEIGHT);
-	addWebTileWithURL("http://www.awesomium.com", WIDTH, HEIGHT);
-	addWebTileWithURL("http://www.flickr.com/explore/interesting/7days/", WIDTH, HEIGHT);
+	m_methodDispatcher = new MethodDispatcher;
+
+	addWebTile(
+		WSLit("home"),
+		WSLit("file:///C:/Code/Awesomium/AweStack/awestack/awe.html#One"),
+		0, 0, WIDTH, HEIGHT
+	);
 
 	// Set our first WebTile as active
-	activeWebTile = 0;
-	webTiles[0]->webView->Focus();
+	int iTile = 0;
+	isActiveWebTileFocused = true;
+	activeWebTile = iTile;
+	webTiles[iTile]->webView->Focus();
 	double curTime = SDL_GetTicks() / 1000.0;
 	zoomDirection = true;
 	zoomStart = curTime;
@@ -93,9 +103,13 @@ Application::~Application() {
 	SDL_Quit();
 }
 
-void Application::addWebTileWithURL(const std::string& url, int width,
-																		int height) {
-	WebTile* tile = new WebTile(width, height);
+WebTile* Application::addWebTile(
+	const WebString id,
+	const WebString url,
+	int left, int top,
+	int width, int height
+) {
+	WebTile* tile = new WebTile( this, id, left, top, width, height );
 
 #if defined(__WIN32__) || defined(_WIN32)
 	SDL_SysWMinfo wmi;
@@ -105,13 +119,65 @@ void Application::addWebTileWithURL(const std::string& url, int width,
 		tile->webView->set_parent_window(wmi.window);
 #endif
 
-	Awesomium::WebURL webUrl(ToWebString(url));
-	tile->webView->LoadURL(webUrl);
-	tile->webView->set_view_listener(this);
-	tile->webView->set_load_listener(this);
-	tile->webView->set_process_listener(this);
+	tile->webView->SetTransparent( TRUE );
+
+	tile->webView->set_view_listener( this );
+	tile->webView->set_load_listener( tile );
+	tile->webView->set_process_listener( this );
 
 	webTiles.push_back(tile);
+
+	loadWebTile( id, url );
+
+	return tile;
+}
+
+void Application::loadWebTile(
+	const WebString id,
+	const WebString url
+) {
+	const WebTile* tile = getWebTile( id );
+	if( tile ) {
+		tile->webView->LoadURL( WebURL(url) );
+	}
+}
+
+void Application::removeWebTile(
+	const WebString id
+) {
+	int i = getWebTileIndex( id );
+	if( i < 0 )
+		return;
+
+	if( i == activeWebTile ) {
+		isActiveWebTileFocused = false;
+		activeWebTile = 0;
+	}
+
+	webTiles[i]->webView->Stop();
+	delete webTiles[i];
+	webTiles.erase( webTiles.begin() + i );
+}
+
+int Application::getWebTileIndex(
+	const WebString id
+) {
+	int i, n = webTiles.size();
+
+	for( i = 0;  i < n;  ++i ) {
+		WebTile* tile = webTiles[i];
+		if( tile->m_id == id ) {
+			return i;
+		}
+	}
+	return -1;
+}
+
+WebTile* Application::getWebTile(
+	const WebString id
+) {
+	int i = getWebTileIndex( id );
+	return i < 0 ? NULL : webTiles[i];
 }
 
 void Application::update() {
@@ -128,6 +194,7 @@ void Application::update() {
 }
 
 void Application::draw() {
+/*
 	double curTime = SDL_GetTicks() / 1000.0;
 	double zoom = 0;
 
@@ -144,79 +211,119 @@ void Application::draw() {
 			isActiveWebTileFocused = zoomDirection;
 		}
 	}
+*/
 
-	if (isActiveWebTileFocused) {
-		const GLTextureSurface* surface = webTiles[activeWebTile]->surface();
+//	testVariables();
 
-		if (surface) {
-			int tileWidth = surface->width();
-			int tileHeight = surface->height();
+	glViewport(0,0,WIDTH,HEIGHT);
+	glEnable (GL_BLEND);
+	glBlendFunc (GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glScalef(1,1,1);
+	glLoadIdentity();
 
-			gluOrtho2D(0, WIDTH, 0, HEIGHT);
-			glClear(GL_COLOR_BUFFER_BIT);
-			glMatrixMode(GL_PROJECTION);
-			glLoadIdentity();
-			glScalef(1,1,1);
-			glBindTexture(GL_TEXTURE_2D, surface->GetTexture());
-			glColor4f(1,1,1,1);
-			glBegin(GL_QUADS);
-			glTexCoord2f(0,1);
-			glVertex3f(0, 0, 0.0f);
-			glTexCoord2f(1,1);
-			glVertex3f((GLfloat)tileWidth, 0, 0.0f);
-			glTexCoord2f(1,0);
-			glVertex3f((GLfloat)tileWidth, (GLfloat)tileHeight, 0.0f);
-			glTexCoord2f(0,0);
-			glVertex3f(0, (GLfloat)tileHeight, 0.0f);
-			glEnd();
-			SDL_GL_SwapBuffers();
+	gluOrtho2D(0, WIDTH, 0, HEIGHT);
+	glClear(GL_COLOR_BUFFER_BIT);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+
+	if( m_order.size() ) {
+		for( int i = m_order.size();  --i >= 0; ) {
+			WebString id = m_order[i].ToString();
+			WebTile* tile = getWebTile( id );
+			if( tile ) {
+				drawOne( tile );
+			}
 		}
 	} else {
-		glViewport(0,0,WIDTH,HEIGHT);
-		glDisable(GL_DEPTH_TEST);
-		glDisable(GL_CULL_FACE);
-		glClearColor(0,0,0,0);
-		glVertexPointer(3,GL_FLOAT,0,GVertices);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glTexCoordPointer(2, GL_SHORT, 0, GTextures);
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glColorPointer(4, GL_FLOAT, 0, customColor);
-		glEnableClientState(GL_COLOR_ARRAY);
-		glEnable(GL_TEXTURE_2D);
-#if TRANSPARENT
-		glEnable (GL_BLEND);
-		glBlendFunc (GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-#endif
-		glClear(GL_COLOR_BUFFER_BIT);
-		glMatrixMode(GL_PROJECTION);
-		glLoadIdentity();
-		glScalef(1,1,1);
-		glTranslatef(0, 0, 0.5);
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-
-		int i, len = webTiles.size();
-		int mid = (int)floor(offset + 0.5);
-		int iStartPos = mid - webTiles.size();
-
-		if (iStartPos < 0)
-			iStartPos = 0;
-
-		for (i = iStartPos; i < mid; ++i)
-			drawTile(i, i-offset, 0);
-
-		int iEndPos = mid + webTiles.size();
-
-		if (iEndPos >= len)
-			iEndPos = len - 1;
-
-		for (i = iEndPos; i > mid; --i)
-			drawTile(i, i - offset, 0);
-
-		drawTile(mid, mid - offset, zoom);
-
-		SDL_GL_SwapBuffers();
+		for( int i = webTiles.size();  --i >= 0; ) {
+			WebTile* tile = webTiles[i];
+			drawOne( tile );
+		}
 	}
+
+	SDL_GL_SwapBuffers();
+}
+
+// Look at a bunch of OpenGL variables for testing
+void testVariables() {
+	GLboolean enable_GL_ALPHA_TEST = glIsEnabled( GL_ALPHA_TEST );  // See glAlphaFunc
+	GLboolean enable_GL_AUTO_NORMAL = glIsEnabled( GL_AUTO_NORMAL );  // See glEvalCoord
+	GLboolean enable_GL_BLEND = glIsEnabled( GL_BLEND );  // See glBlendFunc
+	GLboolean enable_GL_CLIP_PLANE0 = glIsEnabled( GL_CLIP_PLANE0 );  // See glClipPlane
+	GLboolean enable_GL_COLOR_ARRAY = glIsEnabled( GL_COLOR_ARRAY );  // See glColorPointer
+	GLboolean enable_GL_COLOR_LOGIC_OP = glIsEnabled( GL_COLOR_LOGIC_OP );  // See glLogicOp
+	GLboolean enable_GL_COLOR_MATERIAL = glIsEnabled( GL_COLOR_MATERIAL );  // See glColorMaterial
+	GLboolean enable_GL_CULL_FACE = glIsEnabled( GL_CULL_FACE );  // See glCullFace
+	GLboolean enable_GL_DEPTH_TEST = glIsEnabled( GL_DEPTH_TEST );  // See glDepthFunc and glDepthRange
+	GLboolean enable_GL_DITHER = glIsEnabled( GL_DITHER );  // See glEnable
+	GLboolean enable_GL_FOG = glIsEnabled( GL_FOG );  // See glFog
+	GLboolean enable_GL_INDEX_ARRAY = glIsEnabled( GL_INDEX_ARRAY );  // See glIndexPointer
+	GLboolean enable_GL_INDEX_LOGIC_OP = glIsEnabled( GL_INDEX_LOGIC_OP );  // See glLogicOp
+	GLboolean enable_GL_LIGHT0 = glIsEnabled( GL_LIGHT0 );  // See glLightModel and glLight
+	GLboolean enable_GL_LIGHTING = glIsEnabled( GL_LIGHTING );  // See glMaterial, glLightModel, and glLight
+	GLboolean enable_GL_LINE_SMOOTH = glIsEnabled( GL_LINE_SMOOTH );  // See glLineWidth
+	GLboolean enable_GL_LINE_STIPPLE = glIsEnabled( GL_LINE_STIPPLE );  // See glLineStipple
+	GLboolean enable_GL_MAP1_COLOR_4 = glIsEnabled( GL_MAP1_COLOR_4 );  // See glMap1
+	GLboolean enable_GL_MAP1_INDEX = glIsEnabled( GL_MAP1_INDEX );  // See glMap1
+	GLboolean enable_GL_MAP1_NORMAL = glIsEnabled( GL_MAP1_NORMAL );  // See glMap1
+	GLboolean enable_GL_MAP1_TEXTURE_COORD_1 = glIsEnabled( GL_MAP1_TEXTURE_COORD_1 );  // See glMap1
+	GLboolean enable_GL_MAP1_TEXTURE_COORD_2 = glIsEnabled( GL_MAP1_TEXTURE_COORD_2 );  // See glMap1
+	GLboolean enable_GL_MAP1_TEXTURE_COORD_3 = glIsEnabled( GL_MAP1_TEXTURE_COORD_3 );  // See glMap1
+	GLboolean enable_GL_MAP1_TEXTURE_COORD_4 = glIsEnabled( GL_MAP1_TEXTURE_COORD_4 );  // See glMap1
+	GLboolean enable_GL_MAP1_VERTEX_3 = glIsEnabled( GL_MAP1_VERTEX_3 );  // See glMap1
+	GLboolean enable_GL_MAP1_VERTEX_4 = glIsEnabled( GL_MAP1_VERTEX_4 );  // See glMap1
+	GLboolean enable_GL_MAP2_COLOR_4 = glIsEnabled( GL_MAP2_COLOR_4 );  // See glMap2
+	GLboolean enable_GL_MAP2_INDEX = glIsEnabled( GL_MAP2_INDEX );  // See glMap2
+	GLboolean enable_GL_MAP2_NORMAL = glIsEnabled( GL_MAP2_NORMAL );  // See glMap2
+	GLboolean enable_GL_MAP2_TEXTURE_COORD_1 = glIsEnabled( GL_MAP2_TEXTURE_COORD_1 );  // See glMap2
+	GLboolean enable_GL_MAP2_TEXTURE_COORD_2 = glIsEnabled( GL_MAP2_TEXTURE_COORD_2 );  // See glMap2
+	GLboolean enable_GL_MAP2_TEXTURE_COORD_3 = glIsEnabled( GL_MAP2_TEXTURE_COORD_3 );  // See glMap2
+	GLboolean enable_GL_MAP2_TEXTURE_COORD_4 = glIsEnabled( GL_MAP2_TEXTURE_COORD_4 );  // See glMap2
+	GLboolean enable_GL_MAP2_VERTEX_3 = glIsEnabled( GL_MAP2_VERTEX_3 );  // See glMap2
+	GLboolean enable_GL_MAP2_VERTEX_4 = glIsEnabled( GL_MAP2_VERTEX_4 );  // See glMap2
+	GLboolean enable_GL_NORMAL_ARRAY = glIsEnabled( GL_NORMAL_ARRAY );  // See glNormalPointer
+	GLboolean enable_GL_NORMALIZE = glIsEnabled( GL_NORMALIZE );  // See glNormal
+	GLboolean enable_GL_POINT_SMOOTH = glIsEnabled( GL_POINT_SMOOTH );  // See glPointSize
+	GLboolean enable_GL_POLYGON_OFFSET_FILL = glIsEnabled( GL_POLYGON_OFFSET_FILL );  // See glPolygonOffset
+	GLboolean enable_GL_POLYGON_OFFSET_LINE = glIsEnabled( GL_POLYGON_OFFSET_LINE );  // See glPolygonOffset
+	GLboolean enable_GL_POLYGON_OFFSET_POINT = glIsEnabled( GL_POLYGON_OFFSET_POINT );  // See glPolygonOffset
+	GLboolean enable_GL_POLYGON_SMOOTH = glIsEnabled( GL_POLYGON_SMOOTH );  // See glPolygonMode
+	GLboolean enable_GL_POLYGON_STIPPLE = glIsEnabled( GL_POLYGON_STIPPLE );  // See glPolygonStipple
+	GLboolean enable_GL_SCISSOR_TEST = glIsEnabled( GL_SCISSOR_TEST );  // See glScissor
+	GLboolean enable_GL_STENCIL_TEST = glIsEnabled( GL_STENCIL_TEST );  // See glStencilFunc and glStencilOp
+	GLboolean enable_GL_TEXTURE_1D = glIsEnabled( GL_TEXTURE_1D );  // See glTexImage1D
+	GLboolean enable_GL_TEXTURE_2D = glIsEnabled( GL_TEXTURE_2D );  // See glTexImage2D
+	GLboolean enable_GL_TEXTURE_COORD_ARRAY = glIsEnabled( GL_TEXTURE_COORD_ARRAY );  // See glTexCoordPointer
+	GLboolean enable_GL_TEXTURE_GEN_Q = glIsEnabled( GL_TEXTURE_GEN_Q );  // See glTexGen
+	GLboolean enable_GL_TEXTURE_GEN_R = glIsEnabled( GL_TEXTURE_GEN_R );  // See glTexGen
+	GLboolean enable_GL_TEXTURE_GEN_S = glIsEnabled( GL_TEXTURE_GEN_S );  // See glTexGen
+	GLboolean enable_GL_TEXTURE_GEN_T = glIsEnabled( GL_TEXTURE_GEN_T );  // See glTexGen
+	GLboolean enable_GL_VERTEX_ARRAY = glIsEnabled( GL_VERTEX_ARRAY );  // See glVertexPointer
+}
+
+void Application::drawOne( WebTile* tile ) {
+	const GLTextureSurface* surface = tile->surface();
+	if( ! surface ) {
+		return;
+	}
+
+	glBindTexture( GL_TEXTURE_2D, surface->GetTexture() );
+//	glColor4f( 1, 1, 1, 1 );
+	glBegin( GL_QUADS );
+
+	glTexCoord2f( 0, 0 );
+	glVertex3f( (GLfloat)tile->m_left, HEIGHT - (GLfloat)tile->m_top, 0.0f );
+
+	glTexCoord2f( 0, 1 );
+	glVertex3f( (GLfloat)tile->m_left, HEIGHT - (GLfloat)tile->m_top - (GLfloat)tile->m_height, 0.0f );
+
+	glTexCoord2f( 1, 1 );
+	glVertex3f( (GLfloat)tile->m_left + (GLfloat)tile->m_width, HEIGHT - (GLfloat)tile->m_top - (GLfloat)tile->m_height, 0.0f );
+
+	glTexCoord2f( 1, 0 );
+	glVertex3f( (GLfloat)tile->m_left + (GLfloat)tile->m_width, HEIGHT - (GLfloat)tile->m_top, 0.0f );
+
+	glEnd();
 }
 
 void Application::drawTile(int index, double off, double zoom) {
@@ -574,7 +681,7 @@ void Application::handleInput() {
 					return;
 				}
 			} else if (event.key.keysym.mod & KMOD_ALT && event.key.keysym.sym == SDLK_g) {
-				addWebTileWithURL("http://www.google.com", WIDTH, HEIGHT);
+//				addWebTileWithURL("http://www.google.com", WIDTH, HEIGHT);
 
 				animateTo(webTiles.size() - 1);
 
@@ -658,6 +765,15 @@ bool Application::isReadyToQuit() const {
 	return shouldQuit;
 }
 
+void Application::CallJavaScript( Awesomium::WebView* view, const WebString& object, const WebString& function ) {
+	JSValue window = view->ExecuteJavascriptWithResult( object, WSLit("") );
+	if( ! window.IsObject() )
+		return;
+
+	JSArray args;
+	window.ToObject().Invoke( function, args );
+}
+
 void Application::OnChangeTitle(Awesomium::WebView* caller,
 																const Awesomium::WebString& title) {
 }
@@ -682,10 +798,13 @@ void Application::OnChangeFocus(Awesomium::WebView* caller,
 																Awesomium::FocusedElementType focus_type) {
 }
 
-void Application::OnAddConsoleMessage(Awesomium::WebView* caller,
-																	 const Awesomium::WebString& message,
-																	 int line_number,
-																	 const Awesomium::WebString& source) {
+void Application::OnAddConsoleMessage(
+	Awesomium::WebView* caller,
+	const Awesomium::WebString& message,
+	int line_number,
+	const Awesomium::WebString& source
+) {
+	std::cout << message << " - " << source << ':' << line_number << std::endl;
 }
 
 void Application::OnShowCreatedWebView(Awesomium::WebView* caller,
@@ -694,41 +813,6 @@ void Application::OnShowCreatedWebView(Awesomium::WebView* caller,
 																			 const Awesomium::WebURL& target_url,
 																			 const Awesomium::Rect& initial_pos,
 																			 bool is_popup) {
-	new_view->Resize(WIDTH, HEIGHT);
-	WebTile* new_tile = new WebTile(new_view, WIDTH, HEIGHT);
-	new_view->set_view_listener(this);
-	new_view->set_load_listener(this);
-	new_view->set_process_listener(this);
-
-	webTiles.push_back(new_tile);
-	animateTo(webTiles.size() - 1);
-}
-
-void Application::OnBeginLoadingFrame(Awesomium::WebView* caller,
-																	 int64 frame_id,
-																	 bool is_main_frame,
-																	 const Awesomium::WebURL& url,
-																	 bool is_error_page) {
-}
-
-void Application::OnFailLoadingFrame(Awesomium::WebView* caller,
-																	int64 frame_id,
-																	bool is_main_frame,
-																	const Awesomium::WebURL& url,
-																	int error_code,
-																	const Awesomium::WebString& error_description) {
-}
-
-void Application::OnFinishLoadingFrame(Awesomium::WebView* caller,
-																	 int64 frame_id,
-																	 bool is_main_frame,
-																	 const Awesomium::WebURL& url) {
-	if (is_main_frame)
-		std::cout << "Page Loaded [" << caller->title() << "]\n";
-}
-
-void Application::OnDocumentReady(Awesomium::WebView* caller,
-																	const Awesomium::WebURL& url) {
 }
 
 void Application::OnUnresponsive(Awesomium::WebView* caller) {
@@ -740,6 +824,157 @@ void Application::OnResponsive(Awesomium::WebView* caller) {
 void Application::OnCrashed(Awesomium::WebView* caller,
 														Awesomium::TerminationStatus status) {
 	std::cout << "WebView crashed with status: " << (int)status << std::endl;
+}
+
+void Application::bindMethods( WebView* webView, const WebString& id ) {
+	//return;
+	JSValue value = webView->ExecuteJavascriptWithResult(
+		WSLit("AweStack"), WSLit("")
+	);
+	bool isUndefined = value.IsUndefined();
+	bool isObject = value.IsObject();
+	JSObject stacker = value.ToObject();
+
+	// TODO: simplify this repeated boilerplate
+	m_methodDispatcher->Bind(
+		stacker,
+		WSLit("open"),
+		JSDelegate( this, &Application::JS_open )
+	);
+
+	m_methodDispatcher->Bind(
+		stacker,
+		WSLit( "close" ),
+		JSDelegate( this, &Application::JS_close )
+	);
+
+	m_methodDispatcher->Bind(
+		stacker,
+		WSLit( "focus" ),
+		JSDelegate( this, &Application::JS_focus )
+	);
+
+	m_methodDispatcher->Bind(
+		stacker,
+		WSLit( "order" ),
+		JSDelegate( this, &Application::JS_order )
+	);
+
+	m_methodDispatcher->Bind(
+		stacker,
+		WSLit( "postMessage" ),
+		JSDelegate( this, &Application::JS_postMessage )
+	);
+
+	webView->set_js_method_handler( m_methodDispatcher );
+
+	WebString code = WSLit("setTimeout( function() { window.AweStackClient && AweStackClient.start({ id: '");
+	code.Append( id );
+	code.Append( WSLit("' }); }, 25 );") );
+
+	webView->ExecuteJavascript( code, WSLit( "" ) );
+}
+
+int getIntProp( JSObject obj, const char* name, int otherwise ) {
+	JSValue val = obj.GetProperty( WSLit(name) );
+	return val.IsUndefined() ? otherwise : val.ToInteger();
+}
+
+double getDoubleProp( JSObject obj, const char* name, double otherwise ) {
+	JSValue val = obj.GetProperty( WSLit(name) );
+	return val.IsUndefined() ? otherwise : val.ToDouble();
+}
+
+const WebString getStringProp( JSObject obj, const char* name, const char* otherwise ) {
+	JSValue val = obj.GetProperty( WSLit(name) );
+	return val.IsUndefined() ? WSLit(otherwise) : val.ToString();
+}
+
+// Bound to JavaScript:
+//     app.open({
+//         id: 'test',
+//         url: 'http://example.com/',
+//         left: n,
+//         top: n,
+//         width: n,
+//         height: n
+//     });
+void Application::JS_open( WebView* caller, const JSArray& args ) {
+	if( ! args[0].IsObject() ) {
+		return;
+	}
+	const JSObject arg = args[0].ToObject();
+	const WebString id = getStringProp( arg, "id", "" );
+	const WebTile* tile = getWebTile( id );
+	if( tile ) {
+		loadWebTile(
+			id,
+			getStringProp( arg, "url", "" )
+		);
+	} else {
+		addWebTile(
+			id,
+			getStringProp( arg, "url", "" ),
+			getIntProp( arg, "left", 0 ),
+			getIntProp( arg, "top", 0 ),
+			getIntProp( arg, "width", WIDTH ),
+			getIntProp( arg, "height", HEIGHT )
+		);
+	}
+
+}
+
+// Bound to app.close( id ) in JavaScript
+void Application::JS_close( WebView* caller, const JSArray& args ) {
+	if( args.size() != 1 ) {
+		return;
+	}
+	removeWebTile( args[0].ToString() );
+}
+
+// Bound to app.focus( id ) in JavaScript
+void Application::JS_focus( WebView* caller, const JSArray& args ) {
+	if( args.size() != 1 ) {
+		return;
+	}
+	int index = getWebTileIndex( args[0].ToString() );
+	if( index == activeWebTile ) {
+		return;
+	}
+	isActiveWebTileFocused = false;
+	activeWebTile = -1;
+	if( index < 0 ) {
+		return;
+	}
+	isActiveWebTileFocused = true;
+	activeWebTile = index;
+	webTiles[index]->webView->Focus();
+}
+
+// Bound to app.order([ id, id, id... ]) in JavaScript
+void Application::JS_order( WebView* caller, const JSArray& args ) {
+	if( args.size() != 1 ) {
+		return;
+	}
+
+	 m_order = args[0].ToArray();
+}
+
+// Bound to app.postMessage( id, value ) in JavaScript
+void Application::JS_postMessage( WebView* caller, const JSArray& args ) {
+	if( args.size() != 2 ) {
+		return;
+	}
+	const WebTile* tile = getWebTile( args[0].ToString() );
+	if( ! tile ) {
+		return;
+	}
+
+	WebString code = WSLit("window.AweStackClient && AweStackClient.getMessage('");
+	code.Append( args[1].ToString() );
+	code.Append( WSLit("');") );
+
+	tile->webView->ExecuteJavascript( code, WSLit( "" ) );
 }
 
 #define mapKey(a, b) case SDLK_##a: return Awesomium::KeyCodes::AK_##b;
