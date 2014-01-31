@@ -59,7 +59,7 @@ Application::Application() :
 		HEIGHT = 1050;
 
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_WM_SetCaption("Awesomium v1.7 - WebFlow Sample","");
+	SDL_WM_SetCaption("Awe Stack!","");
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1);
 	SDL_SetVideoMode(WIDTH, HEIGHT, 0, SDL_OPENGL);
@@ -765,7 +765,11 @@ bool Application::isReadyToQuit() const {
 	return shouldQuit;
 }
 
-void Application::CallJavaScript( Awesomium::WebView* view, const WebString& object, const WebString& function ) {
+void Application::CallJavaScript(
+	Awesomium::WebView* view,
+	const WebString& object,
+	const WebString& function
+) {
 	JSValue window = view->ExecuteJavascriptWithResult( object, WSLit("") );
 	if( ! window.IsObject() )
 		return;
@@ -778,24 +782,34 @@ void Application::OnChangeTitle(Awesomium::WebView* caller,
 																const Awesomium::WebString& title) {
 }
 
-void Application::OnChangeAddressBar(Awesomium::WebView* caller,
-																		 const Awesomium::WebURL& url) {
+void Application::OnChangeAddressBar(
+	Awesomium::WebView* caller,
+	const Awesomium::WebURL& url
+) {
 }
 
-void Application::OnChangeTooltip(Awesomium::WebView* caller,
-																	const Awesomium::WebString& tooltip) {
+void Application::OnChangeTooltip(
+	Awesomium::WebView* caller,
+	const Awesomium::WebString& tooltip
+) {
 }
 
-void Application::OnChangeTargetURL(Awesomium::WebView* caller,
-																		const Awesomium::WebURL& url) {
+void Application::OnChangeTargetURL(
+	Awesomium::WebView* caller,
+	const Awesomium::WebURL& url
+) {
 }
 
-void Application::OnChangeCursor(Awesomium::WebView* caller,
-																 Awesomium::Cursor cursor) {
+void Application::OnChangeCursor(
+	Awesomium::WebView* caller,
+	Awesomium::Cursor cursor
+) {
 }
 
-void Application::OnChangeFocus(Awesomium::WebView* caller,
-																Awesomium::FocusedElementType focus_type) {
+void Application::OnChangeFocus(
+	Awesomium::WebView* caller,
+	Awesomium::FocusedElementType focus_type
+) {
 }
 
 void Application::OnAddConsoleMessage(
@@ -807,26 +821,37 @@ void Application::OnAddConsoleMessage(
 	std::cout << message << " - " << source << ':' << line_number << std::endl;
 }
 
-void Application::OnShowCreatedWebView(Awesomium::WebView* caller,
-																			 Awesomium::WebView* new_view,
-																			 const Awesomium::WebURL& opener_url,
-																			 const Awesomium::WebURL& target_url,
-																			 const Awesomium::Rect& initial_pos,
-																			 bool is_popup) {
+void Application::OnShowCreatedWebView(
+	Awesomium::WebView* caller,
+	Awesomium::WebView* new_view,
+	const Awesomium::WebURL& opener_url,
+	const Awesomium::WebURL& target_url,
+	const Awesomium::Rect& initial_pos,
+	bool is_popup
+) {
 }
 
-void Application::OnUnresponsive(Awesomium::WebView* caller) {
+void Application::OnUnresponsive(
+	Awesomium::WebView* caller
+) {
 }
 
-void Application::OnResponsive(Awesomium::WebView* caller) {
+void Application::OnResponsive(
+	Awesomium::WebView* caller
+) {
 }
 
-void Application::OnCrashed(Awesomium::WebView* caller,
-														Awesomium::TerminationStatus status) {
+void Application::OnCrashed(
+	Awesomium::WebView* caller,
+	Awesomium::TerminationStatus status
+) {
 	std::cout << "WebView crashed with status: " << (int)status << std::endl;
 }
 
-void Application::bindMethods( WebView* webView, const WebString& id ) {
+void Application::bindMethods(
+	WebView* webView,
+	const WebString& id
+) {
 	//return;
 	JSValue value = webView->ExecuteJavascriptWithResult(
 		WSLit("AweStack"), WSLit("")
@@ -875,17 +900,29 @@ void Application::bindMethods( WebView* webView, const WebString& id ) {
 	webView->ExecuteJavascript( code, WSLit( "" ) );
 }
 
-int getIntProp( JSObject obj, const char* name, int otherwise ) {
+int getIntProp(
+	JSObject obj,
+	const char* name,
+	int otherwise
+) {
 	JSValue val = obj.GetProperty( WSLit(name) );
 	return val.IsUndefined() ? otherwise : val.ToInteger();
 }
 
-double getDoubleProp( JSObject obj, const char* name, double otherwise ) {
+double getDoubleProp(
+	JSObject obj,
+	const char* name,
+	double otherwise
+) {
 	JSValue val = obj.GetProperty( WSLit(name) );
 	return val.IsUndefined() ? otherwise : val.ToDouble();
 }
 
-const WebString getStringProp( JSObject obj, const char* name, const char* otherwise ) {
+const WebString getStringProp(
+	JSObject obj,
+	const char* name,
+	const char* otherwise
+) {
 	JSValue val = obj.GetProperty( WSLit(name) );
 	return val.IsUndefined() ? WSLit(otherwise) : val.ToString();
 }

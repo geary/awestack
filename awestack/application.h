@@ -83,56 +83,96 @@ class Application :
 
 	bool isReadyToQuit() const;
 
-	void bindMethods( Awesomium::WebView* webView, const Awesomium::WebString& id );
+	void bindMethods(
+		Awesomium::WebView* webView,
+		const Awesomium::WebString& id
+	);
 
-	void CallJavaScript( Awesomium::WebView* view, const Awesomium::WebString& object, const Awesomium::WebString& function );
+	void CallJavaScript(
+		Awesomium::WebView* view,
+		const Awesomium::WebString& object,
+		const Awesomium::WebString& function
+	);
 
-	void JS_open( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+	void JS_open(
+		Awesomium::WebView* caller,
+		const Awesomium::JSArray& args
+	);
 
-	void JS_close( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+	void JS_close(
+		Awesomium::WebView* caller,
+		const Awesomium::JSArray& args
+	);
 
-	void JS_focus( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+	void JS_focus(
+		Awesomium::WebView* caller,
+		const Awesomium::JSArray& args
+	);
 
-	void JS_order( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+	void JS_order(
+		Awesomium::WebView* caller,
+		const Awesomium::JSArray& args
+	);
 
-	void JS_postMessage( Awesomium::WebView* caller, const Awesomium::JSArray& args );
+	void JS_postMessage(
+		Awesomium::WebView* caller,
+		const Awesomium::JSArray& args
+	);
 
-	virtual void OnChangeTitle(Awesomium::WebView* caller,
-														 const Awesomium::WebString& title);
+	virtual void OnChangeTitle(
+		Awesomium::WebView* caller,
+		const Awesomium::WebString& title
+	);
 
-	virtual void OnChangeAddressBar(Awesomium::WebView* caller,
-																	const Awesomium::WebURL& url);
+	virtual void OnChangeAddressBar(
+		Awesomium::WebView* caller,
+		const Awesomium::WebURL& url
+	);
 
-	virtual void OnChangeTooltip(Awesomium::WebView* caller,
-															 const Awesomium::WebString& tooltip);
+	virtual void OnChangeTooltip(
+		Awesomium::WebView* caller,
+		const Awesomium::WebString& tooltip
+	);
 
-	virtual void OnChangeTargetURL(Awesomium::WebView* caller,
-																 const Awesomium::WebURL& url);
+	virtual void OnChangeTargetURL(
+		Awesomium::WebView* caller,
+		const Awesomium::WebURL& url
+	);
 
-	virtual void OnChangeCursor(Awesomium::WebView* caller,
-															Awesomium::Cursor cursor);
+	virtual void OnChangeCursor(
+		Awesomium::WebView* caller,
+		Awesomium::Cursor cursor
+	);
 
-	virtual void OnChangeFocus(Awesomium::WebView* caller,
-																Awesomium::FocusedElementType focus_type);
+	virtual void OnChangeFocus(
+		Awesomium::WebView* caller,
+		Awesomium::FocusedElementType focus_type
+	);
 
-	virtual void OnAddConsoleMessage(Awesomium::WebView* caller,
-																	 const Awesomium::WebString& message,
-																	 int line_number,
-																	 const Awesomium::WebString& source);
+	virtual void OnAddConsoleMessage(
+		Awesomium::WebView* caller,
+		const Awesomium::WebString& message,
+		int line_number,
+		const Awesomium::WebString& source
+	);
 
-	virtual void OnShowCreatedWebView(Awesomium::WebView* caller,
-																		Awesomium::WebView* new_view,
-																		const Awesomium::WebURL& opener_url,
-																		const Awesomium::WebURL& target_url,
-																		const Awesomium::Rect& initial_pos,
-																		bool is_popup);
+	virtual void OnShowCreatedWebView(
+		Awesomium::WebView* caller,
+		Awesomium::WebView* new_view,
+		const Awesomium::WebURL& opener_url,
+		const Awesomium::WebURL& target_url,
+		const Awesomium::Rect& initial_pos,
+		bool is_popup
+	);
 
-	virtual void OnUnresponsive(Awesomium::WebView* caller);
+	virtual void OnUnresponsive( Awesomium::WebView* caller );
 
-	virtual void OnResponsive(Awesomium::WebView* caller);
+	virtual void OnResponsive( Awesomium::WebView* caller );
 
-	virtual void OnCrashed(Awesomium::WebView* caller,
-												 Awesomium::TerminationStatus status);
+	virtual void OnCrashed(
+		Awesomium::WebView* caller,
+		Awesomium::TerminationStatus status
+	);
 
  protected:
 	bool shouldQuit, isAnimating, isDragging, isActiveWebTileFocused,
