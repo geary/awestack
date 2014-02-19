@@ -71,6 +71,9 @@ Application::Application() :
 	Awesomium::WebConfig conf;
 	conf.log_level = kLogLevel_Verbose;
 
+	conf.remote_debugging_host = WSLit("127.0.0.1");
+	conf.remote_debugging_port = 1337;
+
 	webCore = Awesomium::WebCore::Initialize(conf);
 	webCore->set_surface_factory(new GLTextureSurfaceFactory());
 
