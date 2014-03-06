@@ -6,3 +6,4 @@ common
 deps
 Debug
 Release
+*.vcxproj.user
